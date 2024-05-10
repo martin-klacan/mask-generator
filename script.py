@@ -4,7 +4,6 @@ import numpy as np
 from pathlib import Path
 
 # TO DO
-  # - add array as source
   # - disable irrelevant coco classes
   # - create and save masks
 
@@ -21,34 +20,48 @@ def createMask(result, start_point, end_point):
 
   img = cv2.rectangle(img, start_point, end_point, color, thickness)
 
-  cv2.imshow('image', img) 
+  return img
+
+# def saveMasks(masks):
+  # TO DO
+    # - get path that the model uses to save results
+    # - create a folder there for each image
+    # - save corresponiding masks in the corresponding folder
+
+def getImages():
+
+  # add all input images to a list
+  tempList = []
+  folder_dir = 'input-images'
+  images = Path(folder_dir).glob('*.jpg')
+  for image in images:
+    tempList.append(image)
+  return tempList
 
 def main():
 
   model = YOLO('yolov8n.pt')
-  source = []
 
-  folder_dir = 'input-images'
-  images = Path(folder_dir).glob('*.jpg')
-  for image in images:
-    source.append(image)
+  source = getImages()
 
-  results = model(source, save=True)
+  results = model(source)
+  print(results)
 
-  # View results
   for r in results:
+    # get coordinates of all bounding boxes
     boxes = r.boxes.numpy()
     xyxys = boxes.xyxy
 
-    # get start and end points of all boxes and create masks
+    masks = []
+    # get start and end points of all bounding boxes and create masks
     for xyxy in xyxys:
       start_point = (int(xyxy[0]), int(xyxy[1]))
       end_point = (int(xyxy[2]), int(xyxy[3]))
-      print(start_point)
-      print(end_point)
-      createMask(r, start_point, end_point)
+      mask = createMask(r, start_point, end_point)
+      masks.append(mask)
 
-    print(xyxys)  # print the Boxes object containing the detection bounding boxes
+    # print(xyxys)  # print the Boxes object containing the detection bounding boxes
+    saveMasks(masks)
 
 if __name__ == '__main__':
   main()
