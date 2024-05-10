@@ -1,19 +1,28 @@
 from ultralytics import YOLO
+import cv2
+import numpy as np
 
-# Create a new YOLO model from scratch
-model = YOLO('yolov8n.yaml')
+# TO DO
+  # - add array as source
+  # - disable irrelevant coco classes
+  # - create and save masks
 
-# Load a pretrained YOLO model (recommended for training)
 model = YOLO('yolov8n.pt')
 
-# Train the model using the 'coco8.yaml' dataset for 3 epochs
-results = model.train(data='coco8.yaml', epochs=3)
+source = 'input-images/room1.jpg'
 
-# Evaluate the model's performance on the validation set
-results = model.val()
+results = model(source)
 
-# Perform object detection on an image using the model
-results = model('https://ultralytics.com/images/bus.jpg')
+# View results
+for r in results:
+    orig_size = r.orig_shape
+    height = orig_size[0]
+    width = orig_size[1]
+    print(height)
+    print(width)
 
-# Export the model to ONNX format
-success = model.export(format='onnx')
+    boxes = r.boxes.numpy()
+    xyxys = boxes.xyxy
+    # for xyxy in xyxys:
+
+    print(xyxys)  # print the Boxes object containing the detection bounding boxes
