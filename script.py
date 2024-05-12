@@ -59,36 +59,63 @@ def saveMasks(masks, img_id, path):
   # return temp_list
 
 def analyzeResults(results, path):
+
+  # find values/ids of relevant classes
+  relevant_classes = ['chair', 'couch', 'bed', 'dining table']
+  relevant_values = []
+  dictionary = results[0].names # returns value:className pairs of all classes
+  for val, class_name in dictionary.items():
+    if class_name in relevant_classes:
+      relevant_values.append(val)
+
   img_id = 0
   for r in results:
+    masks = []
     img_id += 1
 
-    # get coordinates of all bounding boxes
+    # filter only relevant boxes 
     boxes = r.boxes.numpy()
-    xyxys = boxes.xyxy
+    for box in boxes:
+      if box.cls in relevant_values:
+        # get start and end points of all bounding boxes and create masks
+        xyxy = box.xyxy
+        xyxy = xyxy[0] # getting rid of redundant double array
+        start_point = (int(xyxy[0]), int(xyxy[1]))
+        end_point = (int(xyxy[2]), int(xyxy[3]))
 
-    masks = []
-    # get start and end points of all bounding boxes and create masks
-    for xyxy in xyxys:
-      start_point = (int(xyxy[0]), int(xyxy[1]))
-      end_point = (int(xyxy[2]), int(xyxy[3]))
+        # create a mask
+        mask = createMask(r, start_point, end_point)
+        masks.append(mask)
 
-      # create a mask
-      mask = createMask(r, start_point, end_point)
-      masks.append(mask)
+    # save masks of the image    
+    saveMasks(masks, img_id, path)
+
+    # print(furniture_boxes)
+    # xyxys = boxes.xyxy
+
+    # masks = []
+    # # get start and end points of all bounding boxes and create masks
+    # for xyxy in xyxys:
+      # start_point = (int(xyxy[0]), int(xyxy[1]))
+      # end_point = (int(xyxy[2]), int(xyxy[3]))
+
+      # # create a mask
+      # mask = createMask(r, start_point, end_point)
+      # masks.append(mask)
 
     # save masks of the image
-    saveMasks(masks, img_id, path)
+    # saveMasks(masks, img_id, path)
 
 def main():
 
   model = YOLO('yolov8n.pt')
 
   # source = getImages()
+
   # name of the folder with input images
   source = 'input-images'
 
-  results = model(source, save=True)
+  results = model(source, save = True)
   
   path = getPathToSave()
 
