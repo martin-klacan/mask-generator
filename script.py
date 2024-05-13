@@ -6,9 +6,6 @@ import numpy as np
 import pathlib
 from pathlib import Path
 
-# TO DO
-  # - disable irrelevant coco classes
-
 def createMask(result, start_point, end_point):
   orig_size = result.orig_shape
   height = orig_size[0]
@@ -33,7 +30,7 @@ def getPathToSave():
   newest_dir = max(pathlib.Path(temp_path).glob('*/'), key=os.path.getmtime)
   return newest_dir
 
-def saveMasks(masks, img_id, path):
+def saveMasks(masks, img_id, path, result):
   # make new directory for image masks
   parent_directory = path
   new_directory = 'masks-room' + str(img_id)
@@ -48,36 +45,37 @@ def saveMasks(masks, img_id, path):
     img_path = os.path.join(final_path, name)
     cv2.imwrite(img_path, mask)
 
-# def getImages():
+  # save individual cropped pieces of furniture 
+  result.save_crop(final_path)
 
-  # # add all input images to a list
-  # temp_list = []
-  # folder_dir = 'input-images'
-  # images = Path(folder_dir).glob('*.jpg')
-  # for image in images:
-  #   temp_list.append(image)
-  # return temp_list
+  # TO DO: save original images in the folder
 
-def analyzeResults(results, path):
+def findRelevantClasses(results):
 
   # find values/ids of relevant classes
   relevant_classes = ['chair', 'couch', 'bed', 'dining table']
   relevant_values = []
   dictionary = results[0].names # returns value:className pairs of all classes
+
   for val, class_name in dictionary.items():
     if class_name in relevant_classes:
       relevant_values.append(val)
 
+  return relevant_values
+
+def analyzeResults(results, path, relevant_values):
+
   img_id = 0
   for r in results:
-    masks = []
     img_id += 1
+    masks = []
 
     # filter only relevant boxes 
     boxes = r.boxes.numpy()
     for box in boxes:
       if box.cls in relevant_values:
-        # get start and end points of all bounding boxes and create masks
+
+        # get start and end points of the bounding box
         xyxy = box.xyxy
         xyxy = xyxy[0] # getting rid of redundant double array
         start_point = (int(xyxy[0]), int(xyxy[1]))
@@ -88,7 +86,8 @@ def analyzeResults(results, path):
         masks.append(mask)
 
     # save masks of the image    
-    saveMasks(masks, img_id, path)
+    saveMasks(masks, img_id, path, r)
+    
 
     # print(furniture_boxes)
     # xyxys = boxes.xyxy
@@ -110,6 +109,7 @@ def main():
 
   model = YOLO('yolov8n.pt')
 
+
   # source = getImages()
 
   # name of the folder with input images
@@ -117,9 +117,15 @@ def main():
 
   results = model(source, save = True)
   
+
+  # new_result = results[0].new()
+  # new_result.save()
+  
   path = getPathToSave()
 
-  analyzeResults(results, path)
+  relevant_values = findRelevantClasses(results)
+
+  analyzeResults(results, path, relevant_values)
 
 if __name__ == '__main__':
   main()
