@@ -1,10 +1,13 @@
 from ultralytics import YOLO
 from ultralytics import settings
 import os
+import shutil
 import cv2
 import numpy as np
 import pathlib
 from pathlib import Path
+
+relevant_classes = ['chair', 'couch', 'bed', 'dining table']
 
 def createMask(result, start_point, end_point):
   orig_size = result.orig_shape
@@ -30,6 +33,20 @@ def getPathToSave():
   newest_dir = max(pathlib.Path(temp_path).glob('*/'), key=os.path.getmtime)
   return newest_dir
 
+def deleteIrrelevant(directory):
+  # delete irrelevant cropped items
+  for p, folders, files in os.walk(directory):
+    for folder_name in folders:
+      if folder_name not in relevant_classes:
+        path_remove = os.path.join(directory, folder_name)
+        shutil.rmtree(path_remove)
+  
+  # delete result images 
+  parent_dir = getPathToSave()
+  for filename in os.scandir(parent_dir):
+    if filename.is_file():
+      os.remove(filename.path)
+
 def saveMasks(masks, img_id, path, result):
   # make new directory for image masks
   parent_directory = path
@@ -48,12 +65,17 @@ def saveMasks(masks, img_id, path, result):
   # save individual cropped pieces of furniture 
   result.save_crop(final_path)
 
-  # TO DO: save original images in the folder
+  # save the original image to this directory
+  orig_img = result.orig_img
+  name = 'original.jpg'
+  img_path = os.path.join(final_path, name)
+  cv2.imwrite(img_path, orig_img)
+
+  # delete irrelevant stuff
+  deleteIrrelevant(final_path)
 
 def findRelevantClasses(results):
-
   # find values/ids of relevant classes
-  relevant_classes = ['chair', 'couch', 'bed', 'dining table']
   relevant_values = []
   dictionary = results[0].names # returns value:className pairs of all classes
 
@@ -64,8 +86,8 @@ def findRelevantClasses(results):
   return relevant_values
 
 def analyzeResults(results, path, relevant_values):
-
   img_id = 0
+
   for r in results:
     img_id += 1
     masks = []
@@ -87,39 +109,17 @@ def analyzeResults(results, path, relevant_values):
 
     # save masks of the image    
     saveMasks(masks, img_id, path, r)
-    
-
-    # print(furniture_boxes)
-    # xyxys = boxes.xyxy
-
-    # masks = []
-    # # get start and end points of all bounding boxes and create masks
-    # for xyxy in xyxys:
-      # start_point = (int(xyxy[0]), int(xyxy[1]))
-      # end_point = (int(xyxy[2]), int(xyxy[3]))
-
-      # # create a mask
-      # mask = createMask(r, start_point, end_point)
-      # masks.append(mask)
-
-    # save masks of the image
-    # saveMasks(masks, img_id, path)
 
 def main():
 
+  # load a pretrained model
   model = YOLO('yolov8n.pt')
-
-
-  # source = getImages()
 
   # name of the folder with input images
   source = 'input-images'
 
+  # run the model on the input images and save results
   results = model(source, save = True)
-  
-
-  # new_result = results[0].new()
-  # new_result.save()
   
   path = getPathToSave()
 
@@ -129,9 +129,3 @@ def main():
 
 if __name__ == '__main__':
   main()
-
-
-
-
-
-
