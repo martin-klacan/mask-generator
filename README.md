@@ -43,8 +43,9 @@ Note: you don't need to clone the ultralytics repo, everything that's necessary 
 ### Installation
 
 To run this script, simply clone the repo from GitHub
-
-```$ git clone https://github.com/martin-klacan/mask-generator.git```
+```
+$ git clone https://github.com/martin-klacan/mask-generator.git
+```
 
 and run the script with a command
 ```
